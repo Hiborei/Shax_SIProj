@@ -26,12 +26,15 @@ class Point:
         self.x = x
         self.y = y
         self.layer = layer
-        self.pos_x, self.pos_y = get_position(layer, x, y)
+        self.pos_x, self.pos_y = get_point_position(layer, x, y)
         self.state = 0
         self.neighbors = []
 
     def get_position(self):
         return self.pos_x, self.pos_y
+
+    def get_l_x_y(self):
+        return self.layer, self.x, self.y
 
     def change_state(self, state):
         self.state = state
@@ -47,6 +50,9 @@ class Point:
 
     def print(self):
         print('Punkt, layer:'+str(self.layer)+', x:'+str(self.x)+', y:'+str(self.y))
+
+    def is_neighbor(self, p):
+        return self.neighbors.__contains__(p)
 
     def calculate_distance(self, p_x, p_y):
         result = pow((p_x-(self.pos_x+40)), 2)+pow((p_y-(self.pos_y+40)), 2)
@@ -92,7 +98,7 @@ def points_setup():
     return layers
 
 
-def get_position(layer, x, y):
+def get_point_position(layer, x, y):
     base_x = 0
     base_y = 0
     if layer == 0:
@@ -112,20 +118,30 @@ def which_point(layers, pos):
         for j in i:
             for k in j:
                 if k:
-                    if k.get_state() == 0:
-                        if k.calculate_distance(pos[0], pos[1]) < 60:
-                            return k
+                    if k.calculate_distance(pos[0], pos[1]) < 60:
+                        return k
     return None
 
 
 def draw_on_point(point, white):
     pos_x, pos_y = point.get_position()
-    if white:
+    if white == 1:
         point.change_state(1)
         screen.blit(pawn_w, (pos_x, pos_y))
     else:
         point.change_state(2)
         screen.blit(pawn_b, (pos_x, pos_y))
+
+
+def redraw_board(layers):
+    screen.blit(background, (0, 0))
+    screen.blit(board, (103, 100))
+    for l in layers:
+        for x in l:
+            for p in x:
+                if p:
+                    if not p.get_state() == 0:
+                        draw_on_point(p, p.get_state())
     pygame.display.flip()
 
 
@@ -141,7 +157,8 @@ if __name__ == "__main__":
     screen.fill((255, 255, 255))
     screen.blit(background, (0, 0))
     screen.blit(board, (103, 100))
-    vari = True
+    x = 0
+    temp = None
     pygame.display.flip()
     # main loop
     while running:
@@ -150,10 +167,22 @@ if __name__ == "__main__":
             if event.type == pygame.BUTTON_X1:
                 pos = pygame.mouse.get_pos()
                 point = which_point(layers, pos)
-
                 if point:
-                    vari = not vari
-                    draw_on_point(point, vari)
+                    if x == 0:
+                        draw_on_point(point, 1)
+                        pygame.display.flip()
+                        x = x+1
+                    else:
+                        if point.get_state()>0:
+                            temp = point
+                        else:
+                            if point.is_neighbor(temp):
+                                l_p, x_p, y_p = temp.get_l_x_y()
+                                layers[l_p, x_p, y_p].change_state(0)
+                                l_p, x_p, y_p = point.get_l_x_y()
+                                layers[l_p, x_p, y_p].change_state(1)
+                                redraw_board(layers)
+
             if event.type == pygame.KEYDOWN:
                 clear_screen()
 
