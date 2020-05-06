@@ -60,7 +60,10 @@ class Point:
         return result
 
 
-def add_neighbors(layers, point):
+layers = np.empty((3, 3, 3), dtype=Point)
+
+
+def add_neighbors(point):
     if point.x < 2:
         if layers[point.layer, point.x+1, point.y]:
             point.add_neighbor(layers[point.layer, point.x+1, point.y])
@@ -81,8 +84,6 @@ def add_neighbors(layers, point):
 
 
 def points_setup():
-    layers = np.empty((3, 3, 3), dtype=Point)
-
     for l in range(0, 3):
         for i in range(0, 3):
             for j in range(0, 3):
@@ -94,7 +95,7 @@ def points_setup():
         for x in range(0, 3):
             for y in range(0, 3):
                 if not (x == 1 and y == 1):
-                    add_neighbors(layers, layers[l, x, y])
+                    add_neighbors(layers[l, x, y])
     return layers
 
 
@@ -113,7 +114,7 @@ def get_point_position(layer, x, y):
     return base_x, base_y
 
 
-def which_point(layers, pos):
+def which_point(pos):
     for i in layers:
         for j in i:
             for k in j:
@@ -133,7 +134,7 @@ def draw_on_point(point, white):
         screen.blit(pawn_b, (pos_x, pos_y))
 
 
-def redraw_board(layers):
+def redraw_board():
     screen.blit(background, (0, 0))
     screen.blit(board, (103, 100))
     for l in layers:
@@ -151,13 +152,25 @@ def clear_screen():
     pygame.display.flip()
 
 
+def switch_position(p1, p2):
+    color = p1.get_state()
+    p1.change_state(0)
+    p2.change_state(color)
+    redraw_board()
+
+
+def remove_piece(p):
+    p.change_state(0)
+    redraw_board()
+
+
 if __name__ == "__main__":
     layers = points_setup()
     running = True
     screen.fill((255, 255, 255))
     screen.blit(background, (0, 0))
     screen.blit(board, (103, 100))
-    x = 0
+    x = 1
     temp = None
     pygame.display.flip()
     # main loop
@@ -166,22 +179,19 @@ if __name__ == "__main__":
         for event in pygame.event.get():
             if event.type == pygame.BUTTON_X1:
                 pos = pygame.mouse.get_pos()
-                point = which_point(layers, pos)
+                point = which_point(pos)
                 if point:
-                    if x == 0:
-                        draw_on_point(point, 1)
+                    if x < 3:
+                        draw_on_point(point, x)
                         pygame.display.flip()
                         x = x+1
                     else:
-                        if point.get_state()>0:
+                        if point.get_state() > 0:
                             temp = point
                         else:
                             if point.is_neighbor(temp):
-                                l_p, x_p, y_p = temp.get_l_x_y()
-                                layers[l_p, x_p, y_p].change_state(0)
-                                l_p, x_p, y_p = point.get_l_x_y()
-                                layers[l_p, x_p, y_p].change_state(1)
-                                redraw_board(layers)
+                                switch_position(temp, point)
+                                temp = None
 
             if event.type == pygame.KEYDOWN:
                 clear_screen()
