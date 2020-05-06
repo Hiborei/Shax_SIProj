@@ -150,7 +150,6 @@ def redraw_board():
                 if p:
                     if not p.get_state() == 0:
                         draw_on_point(p, p.get_state())
-    pygame.display.flip()
 
 
 def clear_screen():
@@ -164,6 +163,7 @@ def switch_position(p1, p2):
     p1.change_state(0)
     p2.change_state(color)
     redraw_board()
+    pygame.display.flip()
 
 
 def animated_switch_position(p1: Point, p2: Point):
@@ -332,9 +332,6 @@ if __name__ == "__main__":
                                     phase = 2
                                 first_mill = 3
                         else:
-                            if point.is_neighbor(temp):
-                                switch_position(temp, point)
-                                temp = None
                             if phase == 2:
                                 if point.get_state() == turn:
                                     temp = point
