@@ -361,6 +361,7 @@ if __name__ == "__main__":
                                                 phase = 2
                 if phase == 2 and not check_available_moves():
                     phase = 4
+                    switch_turn()
             if event.type == pygame.KEYDOWN:
                 clear_screen()
 
