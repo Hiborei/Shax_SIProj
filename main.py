@@ -1,6 +1,7 @@
 import pygame
 import numpy as np
 import math
+import time
 
 pygame.init()
 
@@ -143,7 +144,6 @@ def redraw_board():
                 if p:
                     if not p.get_state() == 0:
                         draw_on_point(p, p.get_state())
-    pygame.display.flip()
 
 
 def clear_screen():
@@ -157,6 +157,56 @@ def switch_position(p1, p2):
     p1.change_state(0)
     p2.change_state(color)
     redraw_board()
+    pygame.display.flip()
+
+
+def animated_switch_position(p1: Point, p2: Point):
+    color = p1.get_state()
+    if color == 1:
+        image = pawn_w
+    else:
+        image = pawn_b
+    pos_x1, pos_y1 = p1.get_position()
+    pos_x2, pos_y2 = p2.get_position()
+    p1.change_state(0)
+    redraw_board()
+    if pos_x1 == pos_x2:
+        if pos_y1 > pos_y2:
+            dist = pos_y1-pos_y2
+            while dist > 0:
+                pos_y1 = pos_y1-6
+                screen.blit(image, (pos_x1, pos_y1))
+                pygame.display.flip()
+                redraw_board()
+                dist = dist-6
+        else:
+            dist = pos_y2 - pos_y1
+            while dist > 0:
+                pos_y1 = pos_y1 + 6
+                screen.blit(image, (pos_x1, pos_y1))
+                pygame.display.flip()
+                redraw_board()
+                dist = dist - 6
+    else:
+        if pos_x1 > pos_x2:
+            dist = pos_x1-pos_x2
+            while dist > 0:
+                pos_x1 = pos_x1-6
+                screen.blit(image, (pos_x1, pos_y1))
+                pygame.display.flip()
+                redraw_board()
+                dist = dist-6
+        else:
+            dist = pos_x2 - pos_x1
+            while dist > 0:
+                pos_x1 = pos_x1 + 6
+                screen.blit(image, (pos_x1, pos_y1))
+                pygame.display.flip()
+                redraw_board()
+                dist = dist - 6
+    p2.change_state(color)
+    redraw_board()
+    pygame.display.flip()
 
 
 def remove_piece(p):
@@ -190,7 +240,7 @@ if __name__ == "__main__":
                             temp = point
                         else:
                             if point.is_neighbor(temp):
-                                switch_position(temp, point)
+                                animated_switch_position(temp, point)
                                 temp = None
 
             if event.type == pygame.KEYDOWN:
