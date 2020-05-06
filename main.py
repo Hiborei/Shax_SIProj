@@ -166,6 +166,55 @@ def switch_position(p1, p2):
     redraw_board()
 
 
+def animated_switch_position(p1: Point, p2: Point):
+    color = p1.get_state()
+    if color == 1:
+        image = pawn_w
+    else:
+        image = pawn_b
+    pos_x1, pos_y1 = p1.get_position()
+    pos_x2, pos_y2 = p2.get_position()
+    p1.change_state(0)
+    redraw_board()
+    if pos_x1 == pos_x2:
+        if pos_y1 > pos_y2:
+            dist = pos_y1-pos_y2
+            while dist > 0:
+                pos_y1 = pos_y1-6
+                screen.blit(image, (pos_x1, pos_y1))
+                pygame.display.flip()
+                redraw_board()
+                dist = dist-6
+        else:
+            dist = pos_y2 - pos_y1
+            while dist > 0:
+                pos_y1 = pos_y1 + 6
+                screen.blit(image, (pos_x1, pos_y1))
+                pygame.display.flip()
+                redraw_board()
+                dist = dist - 6
+    else:
+        if pos_x1 > pos_x2:
+            dist = pos_x1-pos_x2
+            while dist > 0:
+                pos_x1 = pos_x1-6
+                screen.blit(image, (pos_x1, pos_y1))
+                pygame.display.flip()
+                redraw_board()
+                dist = dist-6
+        else:
+            dist = pos_x2 - pos_x1
+            while dist > 0:
+                pos_x1 = pos_x1 + 6
+                screen.blit(image, (pos_x1, pos_y1))
+                pygame.display.flip()
+                redraw_board()
+                dist = dist - 6
+    p2.change_state(color)
+    redraw_board()
+    pygame.display.flip()
+
+
 def remove_piece(p):
     global phase, win_player
     state = p.get_state()
@@ -283,12 +332,9 @@ if __name__ == "__main__":
                                     phase = 2
                                 first_mill = 3
                         else:
-<<<<<<< Updated upstream
                             if point.is_neighbor(temp):
                                 switch_position(temp, point)
                                 temp = None
-
-=======
                             if phase == 2:
                                 if point.get_state() == turn:
                                     temp = point
@@ -318,7 +364,6 @@ if __name__ == "__main__":
                                                 phase = 2
                 if phase == 2 and not check_available_moves():
                     phase = 4
->>>>>>> Stashed changes
             if event.type == pygame.KEYDOWN:
                 clear_screen()
 
