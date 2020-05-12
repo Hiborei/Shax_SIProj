@@ -28,13 +28,21 @@ board = pygame.image.load("board.png")
 
 pygame.mixer.music.set_volume(0.3)
 pygame.mixer.music.load("Bread.ogg")
+# copyright-free music by Lukrembo
+
 
 put_sound1 = pygame.mixer.Sound("putting_sound1.ogg")
+put_sound1.set_volume(0.3)
 put_sound2 = pygame.mixer.Sound("putting_sound2.ogg")
+put_sound2.set_volume(0.3)
 move_sound1 = pygame.mixer.Sound("moving_sound1.ogg")
+move_sound1.set_volume(0.3)
 move_sound2 = pygame.mixer.Sound("moving_sound2.ogg")
+move_sound2.set_volume(0.3)
 take_sound1 = pygame.mixer.Sound("taking_sound1.ogg")
+take_sound1.set_volume(0.3)
 take_sound2 = pygame.mixer.Sound("taking_sound2.ogg")
+take_sound2.set_volume(0.3)
 
 
 pygame.display.set_icon(pawn_w)
