@@ -1,21 +1,41 @@
 import pygame
 import numpy as np
 import math
+import random
+import time
+
+display_width = 900
+display_height = 1024
 
 pygame.init()
 
-pygame.display.set_caption("minimal program")
+pygame.display.set_caption("Shax")
 
-screen = pygame.display.set_mode((1024, 900))
+screen = pygame.display.set_mode((display_height, display_width))
 
-pawn_w = pygame.image.load("white_ball.png")
+pawn_w = pygame.image.load("2.png")
+
+pawn_b = pygame.image.load("1.png")
+
+pawn_w = pygame.transform.scale(pawn_w, (80, 80))
 pawn_w.set_alpha(None)
 pawn_w.set_colorkey((200, 250, 200))
-pawn_b = pygame.image.load("black_ball.png")
+pawn_b = pygame.transform.scale(pawn_b, (80, 80))
 pawn_b.set_alpha(None)
 pawn_b.set_colorkey((200, 250, 200))
 background = pygame.image.load("bgd.png")
 board = pygame.image.load("board.png")
+
+pygame.mixer.music.set_volume(0.3)
+pygame.mixer.music.load("Bread.ogg")
+
+put_sound1 = pygame.mixer.Sound("putting_sound1.ogg")
+put_sound2 = pygame.mixer.Sound("putting_sound2.ogg")
+move_sound1 = pygame.mixer.Sound("moving_sound1.ogg")
+move_sound2 = pygame.mixer.Sound("moving_sound2.ogg")
+take_sound1 = pygame.mixer.Sound("taking_sound1.ogg")
+take_sound2 = pygame.mixer.Sound("taking_sound2.ogg")
+
 
 pygame.display.set_icon(pawn_w)
 phase = 0
@@ -106,6 +126,11 @@ def points_setup():
     return layers
 
 
+def text_objects(text, font):
+    textSurface = font.render(text, True, (0, 0, 0))
+    return textSurface, textSurface.get_rect()
+
+
 def get_point_position(layer, x, y):
     base_x = 0
     base_y = 0
@@ -132,13 +157,11 @@ def which_point(pos):
 
 
 def draw_on_point(point, white):
-    pos_x, pos_y = point.get_position()
     if white == 1:
         point.change_state(1)
-        screen.blit(pawn_w, (pos_x, pos_y))
     else:
         point.change_state(2)
-        screen.blit(pawn_b, (pos_x, pos_y))
+    redraw_board()
 
 
 def redraw_board():
@@ -149,13 +172,43 @@ def redraw_board():
             for p in x:
                 if p:
                     if not p.get_state() == 0:
-                        draw_on_point(p, p.get_state())
+                        pos_x, pos_y = p.get_position()
+                        if p.get_state() == 1:
+                            screen.blit(pawn_w, (pos_x, pos_y))
+                        else:
+                            screen.blit(pawn_b, (pos_x, pos_y))
+    score_update()
 
 
-def clear_screen():
+def game_reset():
+    global turn, phase, first_mill, win_player
+    for l in layers:
+        for x in l:
+            for p in x:
+                if p:
+                    p.change_state(0)
     screen.blit(background, (0, 0))
     screen.blit(board, (103, 100))
+    pawns_count[0] = 0
+    pawns_count[1] = 0
+    turn = 1
+    phase = 0
+    first_mill = 0
+    win_player = 0
     pygame.display.flip()
+
+
+def message_display(text, x, y):
+    largeText = pygame.font.Font('freesansbold.ttf', 30)
+    TextSurf, TextRect = text_objects(text, largeText)
+    TextRect.center = (x, y)
+    screen.blit(TextSurf, TextRect)
+
+
+def score_update():
+    message_display('Tura: Gracz '+str(turn), (display_width/2)+50, 50)
+    message_display('Białych: ' + str(pawns_count[0]), 100, 50)
+    message_display('Czarnych: '+str(pawns_count[1]), display_width, 50)
 
 
 def switch_position(p1, p2):
@@ -176,40 +229,50 @@ def animated_switch_position(p1: Point, p2: Point):
     pos_x2, pos_y2 = p2.get_position()
     p1.change_state(0)
     redraw_board()
+    r = random.randint(0, 1)
+    if r == 0:
+        move_sound1.play()
+    else:
+        move_sound2.play()
+    time.sleep(0.2)
     if pos_x1 == pos_x2:
         if pos_y1 > pos_y2:
             dist = pos_y1-pos_y2
+            temp = int(dist/30)
             while dist > 0:
-                pos_y1 = pos_y1-6
+                pos_y1 = pos_y1-temp
                 screen.blit(image, (pos_x1, pos_y1))
                 pygame.display.flip()
                 redraw_board()
-                dist = dist-6
+                dist = dist-temp
         else:
             dist = pos_y2 - pos_y1
+            temp = int(dist / 30)
             while dist > 0:
-                pos_y1 = pos_y1 + 6
+                pos_y1 = pos_y1 + temp
                 screen.blit(image, (pos_x1, pos_y1))
                 pygame.display.flip()
                 redraw_board()
-                dist = dist - 6
+                dist = dist - temp
     else:
         if pos_x1 > pos_x2:
             dist = pos_x1-pos_x2
+            temp = int(dist / 30)
             while dist > 0:
-                pos_x1 = pos_x1-6
+                pos_x1 = pos_x1-temp
                 screen.blit(image, (pos_x1, pos_y1))
                 pygame.display.flip()
                 redraw_board()
-                dist = dist-6
+                dist = dist-temp
         else:
             dist = pos_x2 - pos_x1
+            temp = int(dist / 30)
             while dist > 0:
-                pos_x1 = pos_x1 + 6
+                pos_x1 = pos_x1 + temp
                 screen.blit(image, (pos_x1, pos_y1))
                 pygame.display.flip()
                 redraw_board()
-                dist = dist - 6
+                dist = dist - temp
     p2.change_state(color)
     redraw_board()
     pygame.display.flip()
@@ -222,6 +285,13 @@ def remove_piece(p):
     if pawns_count[state-1] == 2:
 
         win_player = turn
+        phase = 6
+
+    r = random.randint(0, 1)
+    if r == 0:
+        take_sound1.play()
+    else:
+        take_sound2.play()
     p.change_state(0)
     redraw_board()
     pygame.display.flip()
@@ -233,6 +303,8 @@ def switch_turn():
         turn = 2
     else:
         turn = 1
+    redraw_board()
+    pygame.display.flip()
     print("Now it's player " + str(turn) + " turn")
 
 
@@ -285,12 +357,13 @@ def check_available_moves():
 
 
 if __name__ == "__main__":
+
+    pygame.mixer.music.play(-1)
     layers = points_setup()
     running = True
     screen.fill((255, 255, 255))
     screen.blit(background, (0, 0))
     screen.blit(board, (103, 100))
-    x = 1
     temp = None
     pygame.display.flip()
     # main loop
@@ -307,9 +380,14 @@ if __name__ == "__main__":
                 if point:
                     if phase == 0:
                         if point.get_state() == 0:
+                            r = random.randint(0, 1)
+                            if r == 0:
+                                put_sound1.play()
+                            else:
+                                put_sound2.play()
+                            pawns_count[turn - 1] = pawns_count[turn - 1] + 1
                             draw_on_point(point, turn)
                             pygame.display.flip()
-                            pawns_count[turn-1] = pawns_count[turn-1] + 1
                             if first_mill == 0 and check_for_mills(point):
                                 first_mill = turn
                                 print('FOUND')
@@ -348,7 +426,8 @@ if __name__ == "__main__":
                                     if not turn == point.get_state():
                                         remove_piece(point)
                                         switch_turn()
-                                        phase = 2
+                                        if not phase == 6:
+                                            phase = 2
                                 else:
                                     if phase == 4:
                                         if point.get_state() == turn:
@@ -359,12 +438,18 @@ if __name__ == "__main__":
                                                 temp = None
                                                 switch_turn()
                                                 phase = 2
+                if phase == 6:
+                    screen.blit(background, (0, 0))
+                    largeText = pygame.font.Font('freesansbold.ttf', 120)
+                    TextSurf, TextRect = text_objects('Gracz '+str(win_player) + ' wygrał!', largeText)
+                    TextRect.center = (display_width/2+50, display_height/2-100)
+                    screen.blit(TextSurf, TextRect)
+                    pygame.display.flip()
                 if phase == 2 and not check_available_moves():
                     phase = 4
                     switch_turn()
             if event.type == pygame.KEYDOWN:
-                clear_screen()
-
+                game_reset()
             # only do something if the event is of type QUIT
             if event.type == pygame.QUIT:
                 # change the value to False, to exit the main loop
