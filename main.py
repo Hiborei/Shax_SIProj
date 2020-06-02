@@ -28,7 +28,6 @@ board = pygame.image.load("board.png")
 
 pygame.mixer.music.set_volume(0.3)
 pygame.mixer.music.load("Bread.ogg")
-# copyright-free music by Lukrembo
 
 
 put_sound1 = pygame.mixer.Sound("putting_sound1.ogg")
@@ -50,6 +49,8 @@ phase = 0
 
 pawns_count = [0, 0]
 first_mill = 0
+# This is Mills current, Mills opponent, Blocked current, Blocked opponent, Number of pieces current, Number of pieces opponent, Won?
+previous_stats = [0, 0, 0, 0, 0, 0, 0]
 
 turn = 1
 win_player = 0
@@ -97,6 +98,11 @@ class Point:
 
 layers = np.empty((3, 3, 3), dtype=Point)
 
+def not_turn():
+    if turn ==1:
+        return 2
+    else:
+        return 1
 
 def add_neighbors(point):
     if point.x < 2:
@@ -364,6 +370,167 @@ def check_available_moves():
     return False
 
 
+def game():
+    global turn, phase, first_mill, temp
+    if phase == 0:
+        if point.get_state() == 0:
+            r = random.randint(0, 1)
+            if r == 0:
+                put_sound1.play()
+            else:
+                put_sound2.play()
+            pawns_count[turn - 1] = pawns_count[turn - 1] + 1
+            draw_on_point(point, turn)
+            pygame.display.flip()
+            if first_mill == 0 and check_for_mills(point):
+                first_mill = turn
+                print('FOUND')
+            switch_turn()
+        if pawns_count[1] == 9:
+            if first_mill == 0:
+                phase = 2
+                switch_turn()
+            else:
+                phase = 1
+
+    else:
+        if phase == 1:
+            if not first_mill == 3:
+                turn = first_mill
+            if not turn == point.get_state() and not point.get_state() == 0:
+                remove_piece(point)
+                switch_turn()
+                if first_mill == 3:
+                    phase = 2
+                first_mill = 3
+        else:
+            if phase == 2:
+                if point.get_state() == turn:
+                    temp = point
+                if point.get_state() == 0:
+                    if point.is_neighbor(temp):
+                        animated_switch_position(temp, point)
+                        temp = None
+                        if check_for_mills(point):
+                            phase = 3
+                        else:
+                            switch_turn()
+            else:
+                if phase == 3:
+                    if not turn == point.get_state():
+                        remove_piece(point)
+                        switch_turn()
+                        if not phase == 6:
+                            phase = 2
+                else:
+                    if phase == 4:
+                        if point.get_state() == turn:
+                            temp = point
+                        if point.get_state() == 0:
+                            if point.is_neighbor(temp):
+                                animated_switch_position(temp, point)
+                                temp = None
+                                switch_turn()
+                                phase = 2
+
+
+def check_for_blocked():
+    blocked_list = [0,0]
+
+    for l in layers:
+        for x in l:
+            for p in x:
+                if p:
+                    if not p.get_state()==0:
+                        neighbors = p.get_neighbors()
+                        blocked = True
+                        for z in neighbors:
+                            if z.get_state() == 0:
+                                blocked = False
+                        if blocked:
+                            blocked_list[p.get_state()-1] = blocked_list[p.get_state()-1] + 1
+
+    print('Blocked current player: '+ str(blocked_list[turn-1])+', blocked opponent: '+ str(blocked_list[not_turn()-1]))
+    return blocked_list
+
+
+def count_mills():
+    mills = [0,0]
+    mill_layers = [layers[0, 0, 1].get_state(), layers[0, 1, 0].get_state(), layers[0, 2, 1].get_state(),
+                   layers[0, 1, 2].get_state()]
+    for x in range(0,len(mill_layers)):
+        if mill_layers[x] == 0:
+            mill_layers[x] = -1
+
+    for l in range(0,3):
+        if not layers[l, 0, 1].get_state() == mill_layers[0]:
+            mill_layers[0] = -1
+        if not layers[l, 1, 0].get_state() == mill_layers[1]:
+            mill_layers[1] = -1
+        if not layers[l, 2, 1].get_state() == mill_layers[2]:
+            mill_layers[2] = -1
+        if not layers[l, 1, 2].get_state() == mill_layers[3]:
+            mill_layers[3] = -1
+
+        p = layers[l,0,0].get_state()
+        if not p == 0:
+            if layers[l,1,0].get_state()==p:
+                if layers[l,2,0].get_state()==p:
+                    mills[p-1] = mills[p-1]+1
+
+            if layers[l,0,1].get_state()==p:
+                if layers[l,0,2].get_state()==p:
+                    mills[p-1] = mills[p-1]+1
+
+        p = layers[l,2,2].get_state()
+
+        if not p == 0:
+            if layers[l, 2, 1].get_state() == p:
+                if layers[l, 2, 0].get_state() == p:
+                    mills[p - 1] = mills[p - 1] + 1
+
+            if layers[l, 1, 2].get_state() == p:
+                if layers[l, 0, 2].get_state() == p:
+                    mills[p - 1] = mills[p - 1] + 1
+    for x in mill_layers:
+        if not x == -1:
+            mills[x-1] = mills[x-1]+1
+
+    print('Mills current player: ' + str(mills[turn-1]) + ', mills opponent: ' + str(mills[not_turn()-1]))
+    return mills
+
+# This is Mills current, Mills opponent, Blocked current, Blocked opponent, Number of pieces current, Number of pieces opponent, Won?
+
+
+def evaluation():
+    global previous_stats
+    # Eval for: New Mills For Current, Removed Mills for Opponent
+    eval_values = [31, 14, 10, 11, 1086]
+
+    stats = [0, 0, 0, 0, 0, 0, 0]
+    stats[0], stats[1] = count_mills()
+    stats[2], stats[3] = check_for_blocked()
+    stats[4] = pawns_count[turn-1]
+    stats[5] = pawns_count[not_turn()-1]
+    if win_player == turn:
+        stats[6] = 1
+    if win_player == not_turn():
+        stats[6] = -1
+    score = 0
+
+    if stats[0] > previous_stats[0]:
+        score = score + eval_values[0]
+    if stats[1] < previous_stats[1]:
+        score = score + eval_values[1]
+
+    score = score + (eval_values[2]*(stats[2]-stats[3]))
+    score = score + (eval_values[3]*(stats[4]-stats[5]))
+    score = score + (stats[6]*eval_values[4])
+
+    previous_stats = stats.copy()
+    return score
+
+
 if __name__ == "__main__":
 
     pygame.mixer.music.play(-1)
@@ -374,78 +541,17 @@ if __name__ == "__main__":
     screen.blit(board, (103, 100))
     temp = None
     pygame.display.flip()
-    # main loop
     while running:
-        # event handling, gets all event from the event queue
         for event in pygame.event.get():
             if event.type == pygame.BUTTON_X1:
                 print('PHASE: '+str(phase))
                 pos = pygame.mouse.get_pos()
                 point = which_point(pos)
                 print(pawns_count)
-                if win_player > 0:
-                    print('KONIEC, wygral gracz ' + str(win_player))
+                check_for_blocked()
+                count_mills()
                 if point:
-                    if phase == 0:
-                        if point.get_state() == 0:
-                            r = random.randint(0, 1)
-                            if r == 0:
-                                put_sound1.play()
-                            else:
-                                put_sound2.play()
-                            pawns_count[turn - 1] = pawns_count[turn - 1] + 1
-                            draw_on_point(point, turn)
-                            pygame.display.flip()
-                            if first_mill == 0 and check_for_mills(point):
-                                first_mill = turn
-                                print('FOUND')
-                            switch_turn()
-                        if pawns_count[1] == 9:
-                            if first_mill == 0:
-                                phase = 2
-                                turn = 2
-                            else:
-                                phase = 1
-
-                    else:
-                        if phase == 1:
-                            if not first_mill == 3:
-                                turn = first_mill
-                            if not turn == point.get_state() and not point.get_state() == 0:
-                                remove_piece(point)
-                                switch_turn()
-                                if first_mill == 3:
-                                    phase = 2
-                                first_mill = 3
-                        else:
-                            if phase == 2:
-                                if point.get_state() == turn:
-                                    temp = point
-                                if point.get_state() == 0:
-                                    if point.is_neighbor(temp):
-                                        animated_switch_position(temp, point)
-                                        temp = None
-                                        if check_for_mills(point):
-                                            phase = 3
-                                        else:
-                                            switch_turn()
-                            else:
-                                if phase == 3:
-                                    if not turn == point.get_state():
-                                        remove_piece(point)
-                                        switch_turn()
-                                        if not phase == 6:
-                                            phase = 2
-                                else:
-                                    if phase == 4:
-                                        if point.get_state() == turn:
-                                            temp = point
-                                        if point.get_state() == 0:
-                                            if point.is_neighbor(temp):
-                                                animated_switch_position(temp, point)
-                                                temp = None
-                                                switch_turn()
-                                                phase = 2
+                    game()
                 if phase == 6:
                     screen.blit(background, (0, 0))
                     largeText = pygame.font.Font('freesansbold.ttf', 120)
@@ -458,7 +564,5 @@ if __name__ == "__main__":
                     switch_turn()
             if event.type == pygame.KEYDOWN:
                 game_reset()
-            # only do something if the event is of type QUIT
             if event.type == pygame.QUIT:
-                # change the value to False, to exit the main loop
                 running = False
