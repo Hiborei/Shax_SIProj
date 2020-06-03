@@ -3,6 +3,9 @@ import numpy as np
 import math
 import random
 import time
+import alpha_beta
+
+MAX, MIN = 1000, -1000
 
 display_width = 900
 display_height = 1024
@@ -370,7 +373,7 @@ def check_available_moves():
     return False
 
 
-def game():
+def game(point):
     global turn, phase, first_mill, temp
     if phase == 0:
         if point.get_state() == 0:
@@ -527,9 +530,49 @@ def evaluation():
     score = score + (eval_values[3]*(stats[4]-stats[5]))
     score = score + (stats[6]*eval_values[4])
 
-    previous_stats = stats.copy()
-    return score
+    return stats, score
 
+
+def check_moves():
+    chosen_point = None
+    scores = []
+    if phase == 1:
+        available_points = []
+        for l in layers:
+            for x in l:
+                for y in x:
+                    if y.get_state() == 0:
+                        available_points.append(y)
+        for p in available_points:
+            p.change_state(turn)
+            pawns_count[turn-1] = pawns_count[turn-1]+1
+            _, s = evaluation()
+            scores.append(s)
+            p.change_state(0)
+            pawns_count[turn - 1] = pawns_count[turn - 1] - 1
+        index = alpha_beta.minimax(0, 0, True, scores, MIN, MAX)
+        chosen_point = available_points[index]
+            
+    if phase == 2 or phase == 4:
+        pass
+    if phase == 1 or phase == 3:
+        available_points = []
+        for l in layers:
+            for x in l:
+                for y in x:
+                    if y.get_state() == not_turn():
+                        available_points.append(y)
+        for p in available_points:
+            p.change_state(0)
+            pawns_count[not_turn() - 1] = pawns_count[not_turn() - 1] - 1
+            _, s = evaluation()
+            scores.append(s)
+            p.change_state(0)
+            pawns_count[turn - 1] = pawns_count[turn - 1] - 1
+        alpha_beta.minimax(0, 0, True, scores, MIN, MAX)
+    
+    game(chosen_point)
+    
 
 if __name__ == "__main__":
 
@@ -548,10 +591,8 @@ if __name__ == "__main__":
                 pos = pygame.mouse.get_pos()
                 point = which_point(pos)
                 print(pawns_count)
-                check_for_blocked()
-                count_mills()
                 if point:
-                    game()
+                    game(point)
                 if phase == 6:
                     screen.blit(background, (0, 0))
                     largeText = pygame.font.Font('freesansbold.ttf', 120)
