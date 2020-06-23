@@ -52,8 +52,9 @@ phase = 0
 
 pawns_count = [0, 0]
 first_mill = 0
-# This is Mills current, Mills opponent, Blocked current, Blocked opponent, Number of pieces current, Number of pieces opponent, Won?
-previous_stats = [0, 0, 0, 0, 0, 0, 0]
+# This is Mills current, Mills opponent, Blocked current, Blocked opponent,
+# Number of pieces current, Number of pieces opponent, Won?
+current_stats = [0, 0, 0, 0, 0, 0, 0]
 
 turn = 1
 win_player = 0
@@ -68,6 +69,12 @@ class Point:
         self.pos_x, self.pos_y = get_point_position(layer, x, y)
         self.state = 0
         self.neighbors = []
+
+    def copy(self):
+        p = Point(self.layer, self.x, self.y)
+        p.change_state(self.state)
+        p.neighbors = self.neighbors.copy()
+        return p
 
     def get_position(self):
         return self.pos_x, self.pos_y
@@ -99,10 +106,70 @@ class Point:
         return result
 
 
+class TreeBranch:
+
+    def __init__(self, parent):
+        self.parent = parent
+        self.move = None
+        self.stats = []
+        self.current_board = None
+        self.next = {}
+        self.score = 0
+
+    def print(self):
+        print(self.move)
+        print(self.stats)
+
+
+    def heritage(self):
+        self.move = self.parent.next.copy()
+        self.current_board = copy(self.parent.current_board)
+
+    def set_root(self):
+        self.next['phase'] = phase
+        self.next['turn'] = turn
+        self.next['first_mill'] = first_mill
+        self.stats = current_stats.copy()
+        self.current_board = copy(layers)
+
+    def set_point(self, l, x, y):
+        self.move['point'] = self.current_board[l, x, y]
+
+    def set_temp(self, l, x, y):
+        self.move['temp'] = self.current_board[l, x, y]
+
+    def get_phase(self):
+        return self.next['phase']
+
+    def get_turn(self):
+        return self.next['turn']
+
+    def get_board(self):
+        return self.current_board
+
+    def determine_stats(self):
+        self.stats, self.score = evaluation(self.current_board)
+
+    def determine_board(self):
+        self.current_board, self.next = game_simulation(self.move, self.current_board)
+
+
 layers = np.empty((3, 3, 3), dtype=Point)
 
-def not_turn():
-    if turn ==1:
+def print_board(board):
+    print(str(board[0,0,0].get_state())+'XX'+str(board[0,1,0].get_state())+'XX'+str(board[0,2,0].get_state()))
+    print('X'+str(board[1, 0, 0].get_state()) + 'X' + str(board[1, 1, 0].get_state()) + 'X' + str(board[1, 2, 0].get_state())+'X')
+    print('XX' + str(board[2, 0, 0].get_state()) + str(board[2, 1, 0].get_state()) + str(board[2, 2, 0].get_state()) + 'XX')
+    print(str(board[0, 0, 1].get_state()) + str(board[1, 0, 1].get_state()) + str(board[2, 0, 1].get_state()) + 'X' + str(board[2, 2, 1].get_state()) + str(board[1, 2, 1].get_state()) + str(board[0, 2, 1].get_state()))
+    print('XX' + str(board[2, 0, 2].get_state()) + str(board[2, 1, 2].get_state()) + str(board[2, 2, 2].get_state()) + 'XX')
+    print('X' + str(board[1, 0, 2].get_state()) + 'X' + str(board[1, 1, 2].get_state()) + 'X' + str(board[1, 2, 2].get_state()) + 'X')
+    print(str(board[0, 0, 2].get_state()) + 'XX' + str(board[0, 1, 2].get_state()) + 'XX' + str(board[0, 2, 2].get_state()))
+
+
+def not_turn(t = None):
+    if not t:
+        t = turn
+    if t == 1:
         return 2
     else:
         return 1
@@ -125,6 +192,17 @@ def add_neighbors(point):
             point.add_neighbor(layers[point.layer+1, point.x, point.y])
         if point.layer > 0:
             point.add_neighbor(layers[point.layer-1, point.x, point.y])
+
+
+def copy(board):
+    new_board = np.empty((3, 3, 3), dtype=Point)
+    for l in range(0,3):
+        for x in range(0,3):
+            for y in range(0,3):
+                if board[l, x, y]:
+                    new_board[l, x, y] = board[l, x, y].copy()
+
+    return new_board
 
 
 def points_setup():
@@ -325,34 +403,34 @@ def switch_turn():
     print("Now it's player " + str(turn) + " turn")
 
 
-def check_for_mills(p: Point):
+def check_for_mills(board_layers, p: Point):
     player = p.get_state()
-    l, x, y = point.get_l_x_y()
+    l, x, y = p.get_l_x_y()
     mill = True
-    if layers[1, x, y]:
+    if board_layers[1, x, y]:
         for i in range(0, 3):
-            if layers[1, x, y].is_neighbor(layers[i, x, y]) or i == 1:
-                if not layers[i, x, y].get_state() == player:
+            if board_layers[1, x, y].is_neighbor(board_layers[i, x, y]) or i == 1:
+                if not board_layers[i, x, y].get_state() == player:
                     mill = False
             else:
                 mill = False
         if mill:
             return True
     mill = True
-    if layers[l, 1, y]:
+    if board_layers[l, 1, y]:
         for i in range(0, 3):
-            if layers[l, 1, y].is_neighbor(layers[l, i, y]) or i == 1:
-                if not layers[l, i, y].get_state() == player:
+            if board_layers[l, 1, y].is_neighbor(board_layers[l, i, y]) or i == 1:
+                if not board_layers[l, i, y].get_state() == player:
                     mill = False
             else:
                 mill = False
         if mill:
             return True
     mill = True
-    if layers[l, x, 1]:
+    if board_layers[l, x, 1]:
         for i in range(0, 3):
-            if layers[l, x, 1].is_neighbor(layers[l, x, i]) or i == 1:
-                if not layers[l, x, i].get_state() == player:
+            if board_layers[l, x, 1].is_neighbor(board_layers[l, x, i]) or i == 1:
+                if not board_layers[l, x, i].get_state() == player:
                     mill = False
             else:
                 mill = False
@@ -361,17 +439,68 @@ def check_for_mills(p: Point):
     return False
 
 
-def check_available_moves():
-    for l in layers:
+def check_available_moves(player, board_layers):
+    for l in board_layers:
         for x in l:
             for p in x:
                 if p:
-                    if p.get_state() == turn:
+                    if p.get_state() == player:
                         for i in p.get_neighbors():
                             if i.get_state() == 0:
                                 return True
     return False
 
+
+def game_simulation(move, board_layers):
+    next_move = {'phase': move['phase'], 'turn': move['turn'], 'first_mill': move['first_mill']}
+    l, x, y = move['point'].get_l_x_y()
+    if 'temp' in move:
+        l_t, x_t, y_t = move['temp'].get_l_x_y()
+
+    if move['phase'] == 0:
+        board_layers[l, x, y].change_state(move['turn'])
+        if move['first_mill'] == 0 and check_for_mills(board_layers, move['point']):
+            next_move['first_mill'] = move['turn']
+        next_move['turn'] = not_turn(move['turn'])
+        if count_player(2, board_layers) == 9:
+            if move['first_mill'] == 0:
+                next_move['phase'] = 2
+                next_move['turn'] = not_turn(move['turn'])
+            else:
+                next_move['phase'] = 1
+
+    else:
+        if move['phase'] == 1:
+            if not move['first_mill'] == 3:
+                move['turn'] = move['first_mill']
+                board_layers[l, x, y].change_state(0)
+                next_move['turn'] = not_turn(move['turn'])
+                if move['first_mill'] == 3:
+                    next_move['phase'] = 2
+                next_move['first_mill'] = 3
+        else:
+            if move['phase'] == 2:
+                board_layers[l_t, x_t, y_t].change_state(0)
+                board_layers[l, x, y].change_state(move['turn'])
+                if check_for_mills(board_layers, move['point']):
+                    next_move['phase'] = 3
+            else:
+                if move['phase'] == 3:
+                        board_layers[l, x, y].change_state(0)
+                        next_move['turn'] = not_turn(move['turn'])
+                        if count_player(next_move['turn'], board_layers) < 3:
+                            next_move['phase'] = 6
+                        else:
+                            next_move['phase'] = 2
+                else:
+                    if move['phase'] == 4:
+                        board_layers[l_t, x_t, y_t].change_state(0)
+                        board_layers[l, x, y].change_state(move['turn'])
+                        next_move['phase'] = 2
+    if not next_move['phase'] == 6 and not check_available_moves(next_move['turn'], board_layers):
+        next_move['phase'] = 2
+        next_move['turn'] = not_turn(next_move['turn'])
+    return board_layers, next_move
 
 def game(point):
     global turn, phase, first_mill, temp
@@ -385,7 +514,7 @@ def game(point):
             pawns_count[turn - 1] = pawns_count[turn - 1] + 1
             draw_on_point(point, turn)
             pygame.display.flip()
-            if first_mill == 0 and check_for_mills(point):
+            if first_mill == 0 and check_for_mills(layers, point):
                 first_mill = turn
                 print('FOUND')
             switch_turn()
@@ -414,7 +543,7 @@ def game(point):
                     if point.is_neighbor(temp):
                         animated_switch_position(temp, point)
                         temp = None
-                        if check_for_mills(point):
+                        if check_for_mills(layers, point):
                             phase = 3
                         else:
                             switch_turn()
@@ -437,10 +566,10 @@ def game(point):
                                 phase = 2
 
 
-def check_for_blocked():
+def check_for_blocked(board_layers):
     blocked_list = [0,0]
 
-    for l in layers:
+    for l in board_layers:
         for x in l:
             for p in x:
                 if p:
@@ -453,77 +582,91 @@ def check_for_blocked():
                         if blocked:
                             blocked_list[p.get_state()-1] = blocked_list[p.get_state()-1] + 1
 
-    print('Blocked current player: '+ str(blocked_list[turn-1])+', blocked opponent: '+ str(blocked_list[not_turn()-1]))
+    # print('Blocked current player: '+ str(blocked_list[turn-1])+', blocked opponent: '+ str(blocked_list[not_turn()-1]))
     return blocked_list
 
 
-def count_mills():
+def count_mills(board_layers):
     mills = [0,0]
-    mill_layers = [layers[0, 0, 1].get_state(), layers[0, 1, 0].get_state(), layers[0, 2, 1].get_state(),
-                   layers[0, 1, 2].get_state()]
-    for x in range(0,len(mill_layers)):
-        if mill_layers[x] == 0:
-            mill_layers[x] = -1
+    mill_board_layers = [board_layers[0, 0, 1].get_state(), board_layers[0, 1, 0].get_state(), board_layers[0, 2, 1].get_state(),
+                   board_layers[0, 1, 2].get_state()]
+    for x in range(0,len(mill_board_layers)):
+        if mill_board_layers[x] == 0:
+            mill_board_layers[x] = -1
 
     for l in range(0,3):
-        if not layers[l, 0, 1].get_state() == mill_layers[0]:
-            mill_layers[0] = -1
-        if not layers[l, 1, 0].get_state() == mill_layers[1]:
-            mill_layers[1] = -1
-        if not layers[l, 2, 1].get_state() == mill_layers[2]:
-            mill_layers[2] = -1
-        if not layers[l, 1, 2].get_state() == mill_layers[3]:
-            mill_layers[3] = -1
+        if not board_layers[l, 0, 1].get_state() == mill_board_layers[0]:
+            mill_board_layers[0] = -1
+        if not board_layers[l, 1, 0].get_state() == mill_board_layers[1]:
+            mill_board_layers[1] = -1
+        if not board_layers[l, 2, 1].get_state() == mill_board_layers[2]:
+            mill_board_layers[2] = -1
+        if not board_layers[l, 1, 2].get_state() == mill_board_layers[3]:
+            mill_board_layers[3] = -1
 
-        p = layers[l,0,0].get_state()
+        p = board_layers[l,0,0].get_state()
         if not p == 0:
-            if layers[l,1,0].get_state()==p:
-                if layers[l,2,0].get_state()==p:
+            if board_layers[l,1,0].get_state()==p:
+                if board_layers[l,2,0].get_state()==p:
                     mills[p-1] = mills[p-1]+1
 
-            if layers[l,0,1].get_state()==p:
-                if layers[l,0,2].get_state()==p:
+            if board_layers[l,0,1].get_state()==p:
+                if board_layers[l,0,2].get_state()==p:
                     mills[p-1] = mills[p-1]+1
 
-        p = layers[l,2,2].get_state()
+        p = board_layers[l,2,2].get_state()
 
         if not p == 0:
-            if layers[l, 2, 1].get_state() == p:
-                if layers[l, 2, 0].get_state() == p:
+            if board_layers[l, 2, 1].get_state() == p:
+                if board_layers[l, 2, 0].get_state() == p:
                     mills[p - 1] = mills[p - 1] + 1
 
-            if layers[l, 1, 2].get_state() == p:
-                if layers[l, 0, 2].get_state() == p:
+            if board_layers[l, 1, 2].get_state() == p:
+                if board_layers[l, 0, 2].get_state() == p:
                     mills[p - 1] = mills[p - 1] + 1
-    for x in mill_layers:
+    for x in mill_board_layers:
         if not x == -1:
             mills[x-1] = mills[x-1]+1
 
-    print('Mills current player: ' + str(mills[turn-1]) + ', mills opponent: ' + str(mills[not_turn()-1]))
+    # print('Mills current player: ' + str(mills[turn-1]) + ', mills opponent: ' + str(mills[not_turn()-1]))
     return mills
 
 # This is Mills current, Mills opponent, Blocked current, Blocked opponent, Number of pieces current, Number of pieces opponent, Won?
 
 
-def evaluation():
-    global previous_stats
+def count_player(player, board_layers):
+    counter = 0
+
+    for l in board_layers:
+        for x in l:
+            for p in x:
+                if p:
+                    if p.get_state()==player:
+                        counter = counter + 1
+
+    return counter
+
+
+def evaluation(board_layers):
     # Eval for: New Mills For Current, Removed Mills for Opponent
     eval_values = [31, 14, 10, 11, 1086]
 
     stats = [0, 0, 0, 0, 0, 0, 0]
-    stats[0], stats[1] = count_mills()
-    stats[2], stats[3] = check_for_blocked()
-    stats[4] = pawns_count[turn-1]
-    stats[5] = pawns_count[not_turn()-1]
-    if win_player == turn:
+    stats[0], stats[1] = count_mills(board_layers)
+    stats[2], stats[3] = check_for_blocked(board_layers)
+    stats[4] = count_player(turn, board_layers)
+    stats[5] = count_player(not_turn(), board_layers)
+
+    if stats[5] < 3:
         stats[6] = 1
-    if win_player == not_turn():
+    if stats[4] < 3:
         stats[6] = -1
+
     score = 0
 
-    if stats[0] > previous_stats[0]:
+    if stats[0] > current_stats[0]:
         score = score + eval_values[0]
-    if stats[1] < previous_stats[1]:
+    if stats[1] < current_stats[1]:
         score = score + eval_values[1]
 
     score = score + (eval_values[2]*(stats[2]-stats[3]))
@@ -533,51 +676,78 @@ def evaluation():
     return stats, score
 
 
-def check_moves():
-    chosen_point = None
-    scores = []
-    if phase == 1:
-        available_points = []
-        for l in layers:
-            for x in l:
-                for y in x:
-                    if y.get_state() == 0:
-                        available_points.append(y)
-        for p in available_points:
-            p.change_state(turn)
-            pawns_count[turn-1] = pawns_count[turn-1]+1
-            _, s = evaluation()
-            scores.append(s)
-            p.change_state(0)
-            pawns_count[turn - 1] = pawns_count[turn - 1] - 1
-        index = alpha_beta.minimax(0, 0, True, scores, MIN, MAX)
-        chosen_point = available_points[index]
-            
-    if phase == 2 or phase == 4:
-        pass
-    if phase == 1 or phase == 3:
-        available_points = []
-        for l in layers:
-            for x in l:
-                for y in x:
-                    if y.get_state() == not_turn():
-                        available_points.append(y)
-        for p in available_points:
-            p.change_state(0)
-            pawns_count[not_turn() - 1] = pawns_count[not_turn() - 1] - 1
-            _, s = evaluation()
-            scores.append(s)
-            p.change_state(0)
-            pawns_count[turn - 1] = pawns_count[turn - 1] - 1
-        alpha_beta.minimax(0, 0, True, scores, MIN, MAX)
-    
-    game(chosen_point)
+def AI_control():
+    root = TreeBranch(None)
+    root.set_root()
+    finals = check_moves([root], 3)
+    print('Wynikow: '+str(len(finals)))
+    for x in range(0,10):
+        print_board(finals[x].get_board())
+        print(finals[x].score)
+        print('-'*10)
+
+
+def check_moves(parents, depth):
+    if depth == 0:
+        return parents
+    children = []
+    for q in parents:
+        b = q.get_board()
+        ph = q.get_phase()
+        if ph == 0:
+            for l in b:
+                for x in l:
+                    for y in x:
+                        if y:
+                            if y.get_state() == 0:
+                                p_l, p_x, p_y = y.get_l_x_y()
+                                child = TreeBranch(q)
+                                child.heritage()
+                                child.set_point(p_l, p_x, p_y)
+                                child.determine_board()
+                                child.determine_stats()
+                                children.append(child)
+
+        if ph == 2 or ph == 4:
+            for l in b:
+                for x in l:
+                    for y in x:
+                        if y:
+                            if y.get_state() == q.get_turn():
+                                neighbors = y.get_neighbors()
+                                for n in neighbors:
+                                    p_l, p_x, p_y = n.get_l_x_y()
+                                    if b[p_l, p_x, p_y].get_state() == 0:
+                                        t_l, t_x, t_y = y.get_l_x_y()
+                                        child = TreeBranch(q)
+                                        child.heritage()
+                                        child.set_point(p_l, p_x, p_y)
+                                        child.set_temp(t_l, t_x, t_y)
+                                        child.determine_board()
+                                        child.determine_stats()
+                                        children.append(child)
+
+        if ph == 1 or ph == 3:
+            for l in b:
+                for x in l:
+                    for y in x:
+                        if y:
+                            if y.get_state() == not_turn(q.get_turn()):
+                                p_l, p_x, p_y = y.get_l_x_y()
+                                child = TreeBranch(q)
+                                child.heritage()
+                                child.set_point(p_l, p_x, p_y)
+                                child.determine_board()
+                                child.determine_stats()
+                                children.append(child)
+    return check_moves(children, depth-1)
+
     
 
 if __name__ == "__main__":
-
-    pygame.mixer.music.play(-1)
+   # pygame.mixer.music.play(-1)
     layers = points_setup()
+
     running = True
     screen.fill((255, 255, 255))
     screen.blit(background, (0, 0))
@@ -600,9 +770,11 @@ if __name__ == "__main__":
                     TextRect.center = (display_width/2+50, display_height/2-100)
                     screen.blit(TextSurf, TextRect)
                     pygame.display.flip()
-                if phase == 2 and not check_available_moves():
+                if phase == 2 and not check_available_moves(turn, layers):
                     phase = 4
                     switch_turn()
+                current_stats, _ = evaluation(layers)
+                AI_control()
             if event.type == pygame.KEYDOWN:
                 game_reset()
             if event.type == pygame.QUIT:
