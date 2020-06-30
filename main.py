@@ -115,6 +115,7 @@ class TreeBranch:
         self.current_board = None
         self.next = {}
         self.score = 0
+        self.children = []
 
     def print(self):
         print(self.move)
@@ -129,6 +130,7 @@ class TreeBranch:
         self.next['phase'] = phase
         self.next['turn'] = turn
         self.next['first_mill'] = first_mill
+        self.next['double_exists'] = False
         self.stats = current_stats.copy()
         self.current_board = copy(layers)
 
@@ -137,6 +139,9 @@ class TreeBranch:
 
     def set_temp(self, l, x, y):
         self.move['temp'] = self.current_board[l, x, y]
+
+    def add_child(self, child):
+        self.children.append(child)
 
     def get_phase(self):
         return self.next['phase']
@@ -147,10 +152,19 @@ class TreeBranch:
     def get_board(self):
         return self.current_board
 
+    def get_children(self):
+        return self.children
+
     def determine_stats(self):
         self.stats, self.score = evaluation(self.current_board)
 
     def determine_board(self):
+        self.current_board, self.next = game_simulation(self.move, self.current_board)
+
+    def determine_double(self, l, x, y):
+        self.move['phase'] = self.next['phase']
+        self.move['double'] = self.current_board[l, x, y]
+        self.move['double_exists'] = True
         self.current_board, self.next = game_simulation(self.move, self.current_board)
 
 
@@ -452,8 +466,11 @@ def check_available_moves(player, board_layers):
 
 
 def game_simulation(move, board_layers):
-    next_move = {'phase': move['phase'], 'turn': move['turn'], 'first_mill': move['first_mill']}
-    l, x, y = move['point'].get_l_x_y()
+    next_move = {'phase': move['phase'], 'turn': move['turn'], 'first_mill': move['first_mill'], 'double_exists': False}
+    if move['double_exists']:
+        l, x, y = move['double'].get_l_x_y()
+    else:
+        l, x, y = move['point'].get_l_x_y()
     if 'temp' in move:
         l_t, x_t, y_t = move['temp'].get_l_x_y()
 
@@ -468,11 +485,11 @@ def game_simulation(move, board_layers):
                 next_move['turn'] = not_turn(move['turn'])
             else:
                 next_move['phase'] = 1
+                next_move['turn'] = next_move['first_mill']
 
     else:
         if move['phase'] == 1:
             if not move['first_mill'] == 3:
-                move['turn'] = move['first_mill']
                 board_layers[l, x, y].change_state(0)
                 next_move['turn'] = not_turn(move['turn'])
                 if move['first_mill'] == 3:
@@ -483,7 +500,10 @@ def game_simulation(move, board_layers):
                 board_layers[l_t, x_t, y_t].change_state(0)
                 board_layers[l, x, y].change_state(move['turn'])
                 if check_for_mills(board_layers, move['point']):
+                    next_move['turn'] = move['turn']
                     next_move['phase'] = 3
+                else:
+                    next_move['turn'] = not_turn(move['turn'])
             else:
                 if move['phase'] == 3:
                         board_layers[l, x, y].change_state(0)
@@ -679,12 +699,29 @@ def evaluation(board_layers):
 def AI_control():
     root = TreeBranch(None)
     root.set_root()
+
+    # Tutaj ta 3 to głębokość :)
     finals = check_moves([root], 3)
-    print('Wynikow: '+str(len(finals)))
-    for x in range(0,10):
-        print_board(finals[x].get_board())
-        print(finals[x].score)
-        print('-'*10)
+
+    # TUTAJ KOD DO ALFA-BETA, NIECH ZWRACA GAŁĄŻ Z RUCHEM JAKI NALEŻY PODJĄĆ
+
+    # przykład - to zwraca po prostu pierwszego rodzica z brzegu
+    m = finals[0].parent.parent
+
+    # TUTAJ KOD DO ALFA-BETA, NIECH ZWRACA GAŁĄŻ Z RUCHEM JAKI NALEŻY PODJĄĆ
+
+    if 'temp' in m.move:
+        t = m.move['temp']
+    else:
+        t = None
+    if m.move['double_exists']:
+        d = m.move['double']
+    else:
+        d = None
+
+    p = m.move['point']
+
+    return p, t, d
 
 
 def check_moves(parents, depth):
@@ -705,9 +742,21 @@ def check_moves(parents, depth):
                                 child.heritage()
                                 child.set_point(p_l, p_x, p_y)
                                 child.determine_board()
-                                child.determine_stats()
-                                children.append(child)
-
+                                if child.next['phase'] == 1 and child.next['turn'] == q.get_turn():
+                                    for l in b:
+                                        for x in l:
+                                            for y in x:
+                                                if y:
+                                                    if y.get_state() == not_turn(q.get_turn()):
+                                                        d_l, d_x, d_y = y.get_l_x_y()
+                                                        child.determine_double(d_l, d_x, d_y)
+                                                        child.determine_stats()
+                                                        children.append(child)
+                                                        q.add_child(child)
+                                else:
+                                    child.determine_stats()
+                                    children.append(child)
+                                    q.add_child(child)
         if ph == 2 or ph == 4:
             for l in b:
                 for x in l:
@@ -724,10 +773,23 @@ def check_moves(parents, depth):
                                         child.set_point(p_l, p_x, p_y)
                                         child.set_temp(t_l, t_x, t_y)
                                         child.determine_board()
-                                        child.determine_stats()
-                                        children.append(child)
+                                        if child.next['phase'] == 3:
+                                            for l in b:
+                                                for x in l:
+                                                    for y in x:
+                                                        if y:
+                                                            if y.get_state() == not_turn(q.get_turn()):
+                                                                d_l, d_x, d_y = y.get_l_x_y()
+                                                                child.determine_double(d_l, d_x, d_y)
+                                                                child.determine_stats()
+                                                                children.append(child)
+                                                                q.add_child(child)
+                                        else:
+                                            child.determine_stats()
+                                            children.append(child)
+                                            q.add_child(child)
 
-        if ph == 1 or ph == 3:
+        if ph == 1:
             for l in b:
                 for x in l:
                     for y in x:
@@ -740,6 +802,7 @@ def check_moves(parents, depth):
                                 child.determine_board()
                                 child.determine_stats()
                                 children.append(child)
+                                q.add_child(child)
     return check_moves(children, depth-1)
 
     
@@ -774,7 +837,29 @@ if __name__ == "__main__":
                     phase = 4
                     switch_turn()
                 current_stats, _ = evaluation(layers)
-                AI_control()
+                if turn == 2:
+                    p, t, d = AI_control()
+                    l, x, y = p.get_l_x_y()
+                    point = layers[l, x, y]
+                    if t:
+                        t_l, t_x, t_y = t.get_l_x_y()
+                        temp = layers[t_l, t_x, t_y]
+                    game(point)
+                    if turn == 2:
+                        d_l, d_x, d_y = d.get_l_x_y()
+                        double = layers[d_l, d_x, d_y]
+                        game(d)
+                    if phase == 6:
+                        screen.blit(background, (0, 0))
+                        largeText = pygame.font.Font('freesansbold.ttf', 120)
+                        TextSurf, TextRect = text_objects('Gracz '+str(win_player) + ' wygrał!', largeText)
+                        TextRect.center = (display_width/2+50, display_height/2-100)
+                        screen.blit(TextSurf, TextRect)
+                        pygame.display.flip()
+                    if phase == 2 and not check_available_moves(turn, layers):
+                        phase = 4
+                        switch_turn()
+
             if event.type == pygame.KEYDOWN:
                 game_reset()
             if event.type == pygame.QUIT:
