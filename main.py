@@ -707,7 +707,9 @@ def AI_control():
 
     # przykład - to zwraca po prostu pierwszego rodzica z brzegu
     m = finals[0].parent.parent
-    print(alpha_beta.minmax(root, 3, -10000, 10000, True))
+    for p in finals:
+        print(p.score)
+    print("Najlepszy wybor: ",alpha_beta.minmax(root, 3, -10000, 10000, False))
 
     # TUTAJ KOD DO ALFA-BETA, NIECH ZWRACA GAŁĄŻ Z RUCHEM JAKI NALEŻY PODJĄĆ
 

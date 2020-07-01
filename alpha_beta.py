@@ -2,6 +2,7 @@
 
 def minmax(node,depth,alpha,beta,maximizingPlayer):
 
+# jeśli dochodzi do liscia
     if (depth == 0):
         return node.score
 
