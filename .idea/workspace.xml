@@ -1,10 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ChangeListManager">
-    <list default="true" id="785019e2-0900-4734-91c4-c0c376c4daf0" name="Default Changelist" comment="">
+    <list default="true" id="785019e2-0900-4734-91c4-c0c376c4daf0" name="Default Changelist" comment="mini max">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/alpha_beta.py" beforeDir="false" afterPath="$PROJECT_DIR$/alpha_beta.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/main.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/minimax.py" beforeDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -148,7 +147,8 @@
       <workItem from="1591187214223" duration="1828000" />
       <workItem from="1593006796089" duration="1533000" />
       <workItem from="1593421613884" duration="6166000" />
-      <workItem from="1593520320311" duration="910000" />
+      <workItem from="1593520320311" duration="1261000" />
+      <workItem from="1593600651092" duration="918000" />
     </task>
     <task id="LOCAL-00001" summary="mini max">
       <created>1591086110258</created>
@@ -164,7 +164,21 @@
       <option name="project" value="LOCAL" />
       <updated>1591086529556</updated>
     </task>
-    <option name="localTasksCounter" value="3" />
+    <task id="LOCAL-00003" summary="mini max">
+      <created>1593521293970</created>
+      <option name="number" value="00003" />
+      <option name="presentableId" value="LOCAL-00003" />
+      <option name="project" value="LOCAL" />
+      <updated>1593521293970</updated>
+    </task>
+    <task id="LOCAL-00004" summary="mini max">
+      <created>1593601595852</created>
+      <option name="number" value="00004" />
+      <option name="presentableId" value="LOCAL-00004" />
+      <option name="project" value="LOCAL" />
+      <updated>1593601595852</updated>
+    </task>
+    <option name="localTasksCounter" value="5" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -188,26 +202,26 @@
     <option name="LAST_COMMIT_MESSAGE" value="mini max" />
   </component>
   <component name="WindowStateProjectService">
-    <state x="308" y="0" key="CommitChangelistDialog2" timestamp="1593521292564">
+    <state x="308" y="0" key="CommitChangelistDialog2" timestamp="1593601606977">
       <screen x="0" y="0" width="1366" height="728" />
     </state>
-    <state x="308" y="0" key="CommitChangelistDialog2/0.0.1366.728@0.0.1366.728" timestamp="1593521292564" />
-    <state width="1322" height="171" key="GridCell.Tab.0.bottom" timestamp="1593520716752">
+    <state x="308" y="0" key="CommitChangelistDialog2/0.0.1366.728@0.0.1366.728" timestamp="1593601606977" />
+    <state width="1322" height="171" key="GridCell.Tab.0.bottom" timestamp="1593601524132">
       <screen x="0" y="0" width="1366" height="728" />
     </state>
-    <state width="1322" height="171" key="GridCell.Tab.0.bottom/0.0.1366.728@0.0.1366.728" timestamp="1593520716752" />
-    <state width="1322" height="171" key="GridCell.Tab.0.center" timestamp="1593520716752">
+    <state width="1322" height="171" key="GridCell.Tab.0.bottom/0.0.1366.728@0.0.1366.728" timestamp="1593601524132" />
+    <state width="1322" height="171" key="GridCell.Tab.0.center" timestamp="1593601524132">
       <screen x="0" y="0" width="1366" height="728" />
     </state>
-    <state width="1322" height="171" key="GridCell.Tab.0.center/0.0.1366.728@0.0.1366.728" timestamp="1593520716752" />
-    <state width="1322" height="171" key="GridCell.Tab.0.left" timestamp="1593520716752">
+    <state width="1322" height="171" key="GridCell.Tab.0.center/0.0.1366.728@0.0.1366.728" timestamp="1593601524132" />
+    <state width="1322" height="171" key="GridCell.Tab.0.left" timestamp="1593601524132">
       <screen x="0" y="0" width="1366" height="728" />
     </state>
-    <state width="1322" height="171" key="GridCell.Tab.0.left/0.0.1366.728@0.0.1366.728" timestamp="1593520716752" />
-    <state width="1322" height="171" key="GridCell.Tab.0.right" timestamp="1593520716752">
+    <state width="1322" height="171" key="GridCell.Tab.0.left/0.0.1366.728@0.0.1366.728" timestamp="1593601524132" />
+    <state width="1322" height="171" key="GridCell.Tab.0.right" timestamp="1593601524132">
       <screen x="0" y="0" width="1366" height="728" />
     </state>
-    <state width="1322" height="171" key="GridCell.Tab.0.right/0.0.1366.728@0.0.1366.728" timestamp="1593520716752" />
+    <state width="1322" height="171" key="GridCell.Tab.0.right/0.0.1366.728@0.0.1366.728" timestamp="1593601524132" />
     <state x="395" y="78" key="MultipleFileMergeDialog" timestamp="1593520409390">
       <screen x="0" y="0" width="1366" height="728" />
     </state>
@@ -220,14 +234,14 @@
       <screen x="0" y="0" width="1366" height="728" />
     </state>
     <state x="275" y="95" key="Vcs.Push.Dialog.v2/0.0.1366.728@0.0.1366.728" timestamp="1591086546337" />
-    <state x="378" y="186" key="com.intellij.ide.util.TipDialog" timestamp="1593520328483">
+    <state x="378" y="186" key="com.intellij.ide.util.TipDialog" timestamp="1593600682052">
       <screen x="0" y="0" width="1366" height="728" />
     </state>
-    <state x="378" y="186" key="com.intellij.ide.util.TipDialog/0.0.1366.728@0.0.1366.728" timestamp="1593520328483" />
-    <state x="492" y="279" key="com.intellij.openapi.vcs.update.UpdateOrStatusOptionsDialogupdate-v2" timestamp="1593520344374">
+    <state x="378" y="186" key="com.intellij.ide.util.TipDialog/0.0.1366.728@0.0.1366.728" timestamp="1593600682052" />
+    <state x="492" y="279" key="com.intellij.openapi.vcs.update.UpdateOrStatusOptionsDialogupdate-v2" timestamp="1593521552375">
       <screen x="0" y="0" width="1366" height="728" />
     </state>
-    <state x="492" y="279" key="com.intellij.openapi.vcs.update.UpdateOrStatusOptionsDialogupdate-v2/0.0.1366.728@0.0.1366.728" timestamp="1593520344374" />
+    <state x="492" y="279" key="com.intellij.openapi.vcs.update.UpdateOrStatusOptionsDialogupdate-v2/0.0.1366.728@0.0.1366.728" timestamp="1593521552375" />
   </component>
   <component name="XDebuggerManager">
     <watches-manager>
@@ -238,7 +252,7 @@
     </watches-manager>
   </component>
   <component name="com.intellij.coverage.CoverageDataManagerImpl">
-    <SUITE FILE_PATH="coverage/Shax_SIProj$main.coverage" NAME="main Coverage Results" MODIFIED="1593520716565" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/Shax_SIProj$main.coverage" NAME="main Coverage Results" MODIFIED="1593601295242" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/Shax_SIProj$minimax.coverage" NAME="minimax Coverage Results" MODIFIED="1591085254877" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/Shax_SIProj$alpha_beta.coverage" NAME="alpha_beta Coverage Results" MODIFIED="1593440871323" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
   </component>
