@@ -98,7 +98,13 @@ class Point:
         print('Punkt, layer:'+str(self.layer)+', x:'+str(self.x)+', y:'+str(self.y))
 
     def is_neighbor(self, p):
-        return self.neighbors.__contains__(p)
+        l, x, y = p.get_l_x_y()
+        for n in self.neighbors:
+            n_l, n_x, n_y = n.get_l_x_y()
+            if n_l == l and n_x == x and n_y == y:
+                return True
+        return False
+
 
     def calculate_distance(self, p_x, p_y):
         result = pow((p_x-(self.pos_x+40)), 2)+pow((p_y-(self.pos_y+40)), 2)
@@ -482,7 +488,7 @@ def game_simulation(move, board_layers):
         if count_player(2, board_layers) == 9:
             if move['first_mill'] == 0:
                 next_move['phase'] = 2
-                next_move['turn'] = not_turn(move['turn'])
+                next_move['turn'] = not_turn(next_move['turn'])
             else:
                 next_move['phase'] = 1
                 next_move['turn'] = next_move['first_mill']
@@ -544,11 +550,10 @@ def game(point):
                 switch_turn()
             else:
                 phase = 1
+                turn = first_mill
 
     else:
         if phase == 1:
-            if not first_mill == 3:
-                turn = first_mill
             if not turn == point.get_state() and not point.get_state() == 0:
                 remove_piece(point)
                 switch_turn()
@@ -707,8 +712,8 @@ def AI_control():
 
     # przykład - to zwraca po prostu pierwszego rodzica z brzegu
     # m = finals[0].parent.parent
-    m = alpha_beta.minmax2(root,3,-10000,10000,False)
-
+    m = alpha_beta.minmax2(root,3,-1000000,1000000,False)
+    m = m.parent.parent
 
     # TUTAJ KOD DO ALFA-BETA, NIECH ZWRACA GAŁĄŻ Z RUCHEM JAKI NALEŻY PODJĄĆ
 
@@ -744,21 +749,38 @@ def check_moves(parents, depth):
                                 child.heritage()
                                 child.set_point(p_l, p_x, p_y)
                                 child.determine_board()
-                                if child.next['phase'] == 1 and child.next['turn'] == q.get_turn():
-                                    for l in b:
-                                        for x in l:
-                                            for y in x:
-                                                if y:
-                                                    if y.get_state() == not_turn(q.get_turn()):
-                                                        d_l, d_x, d_y = y.get_l_x_y()
+                                if child.next['phase'] == 1 and child.next['turn'] == child.get_turn():
+                                    for l2 in child.get_board():
+                                        for x2 in l2:
+                                            for y2 in x2:
+                                                if y2:
+                                                    if y2.get_state() == not_turn(child.get_turn()):
+                                                        d_l, d_x, d_y = y2.get_l_x_y()
                                                         child.determine_double(d_l, d_x, d_y)
                                                         child.determine_stats()
                                                         children.append(child)
                                                         q.add_child(child)
                                 else:
-                                    child.determine_stats()
-                                    children.append(child)
-                                    q.add_child(child)
+                                    if child.next['phase'] == 2 and child.next['turn'] == child.get_turn():
+                                        for l2 in child.get_board():
+                                            for x2 in l2:
+                                                for y2 in x2:
+                                                    if y2:
+                                                        if y2.get_state() == child.get_turn():
+                                                            neighbors = y2.get_neighbors()
+                                                            for n in neighbors:
+                                                                d_l, d_x, d_y = n.get_l_x_y()
+                                                                if child.get_board()[d_l, d_x, d_y].get_state() == 0:
+                                                                    t_l, t_x, t_y = y2.get_l_x_y()
+                                                                    child.set_temp(t_l, t_x, t_y)
+                                                                    child.determine_double(d_l, d_x, d_y)
+                                                                    child.determine_stats()
+                                                                    children.append(child)
+                                                                    q.add_child(child)
+                                    else:
+                                        child.determine_stats()
+                                        children.append(child)
+                                        q.add_child(child)
         if ph == 2 or ph == 4:
             for l in b:
                 for x in l:
@@ -776,12 +798,12 @@ def check_moves(parents, depth):
                                         child.set_temp(t_l, t_x, t_y)
                                         child.determine_board()
                                         if child.next['phase'] == 3:
-                                            for l in b:
-                                                for x in l:
-                                                    for y in x:
-                                                        if y:
-                                                            if y.get_state() == not_turn(q.get_turn()):
-                                                                d_l, d_x, d_y = y.get_l_x_y()
+                                            for l2 in child.get_board():
+                                                for x2 in l2:
+                                                    for y2 in x2:
+                                                        if y2:
+                                                            if y2.get_state() == not_turn(child.get_turn()):
+                                                                d_l, d_x, d_y = y2.get_l_x_y()
                                                                 child.determine_double(d_l, d_x, d_y)
                                                                 child.determine_stats()
                                                                 children.append(child)
@@ -805,6 +827,8 @@ def check_moves(parents, depth):
                                 child.determine_stats()
                                 children.append(child)
                                 q.add_child(child)
+    if not children:
+        print('WTF')
     return check_moves(children, depth-1)
 
     
@@ -848,9 +872,12 @@ if __name__ == "__main__":
                         temp = layers[t_l, t_x, t_y]
                     game(point)
                     if turn == 2:
+                        if t:
+                            t_l, t_x, t_y = t.get_l_x_y()
+                            temp = layers[t_l, t_x, t_y]
                         d_l, d_x, d_y = d.get_l_x_y()
                         double = layers[d_l, d_x, d_y]
-                        game(d)
+                        game(double)
                     if phase == 6:
                         screen.blit(background, (0, 0))
                         largeText = pygame.font.Font('freesansbold.ttf', 120)

@@ -35,7 +35,7 @@ def minmax2(node,depth,alpha,beta,maximizingPlayer):
 
     if (maximizingPlayer):
         maxEval = main.TreeBranch(None)
-        maxEval.score = -10000
+        maxEval.score = -1000000
         for child in node.children:
             eval = minmax2(child,depth-1,alpha,beta,False)
             if(eval.score > maxEval.score):
@@ -48,7 +48,7 @@ def minmax2(node,depth,alpha,beta,maximizingPlayer):
 
     else:
         maxEval = main.TreeBranch(None)
-        maxEval.score = 10000
+        maxEval.score = 1000000
         for child in node.children:
             eval = minmax2(child,depth-1,alpha,beta,True)
             if(eval.score < maxEval.score):
