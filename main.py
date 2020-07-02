@@ -33,6 +33,7 @@ pygame.mixer.music.set_volume(0.3)
 pygame.mixer.music.load("Bread.ogg")
 
 
+
 put_sound1 = pygame.mixer.Sound("putting_sound1.ogg")
 put_sound1.set_volume(0.3)
 put_sound2 = pygame.mixer.Sound("putting_sound2.ogg")
@@ -59,7 +60,7 @@ current_stats = [0, 0, 0, 0, 0, 0, 0]
 turn = 1
 win_player = 0
 
-
+AI_level = 1
 class Point:
 
     def __init__(self, layer, x, y):
@@ -140,6 +141,23 @@ class TreeBranch:
         self.stats = current_stats.copy()
         self.current_board = copy(layers)
 
+    def print_branch(self):
+        print(self.move)
+        print('-'*10)
+        print('Punkt glowny:')
+        self.move['point'].print()
+        if 'temp' in self.move:
+            print('-' * 10)
+            print('Temp:')
+            self.move['temp'].print()
+        if self.move['double_exists']:
+            print('-' * 10)
+            print('Double:')
+            self.move['double'].print()
+        print_board(self.current_board)
+        print(self.next)
+
+
     def set_point(self, l, x, y):
         self.move['point'] = self.current_board[l, x, y]
 
@@ -172,6 +190,13 @@ class TreeBranch:
         self.move['double'] = self.current_board[l, x, y]
         self.move['double_exists'] = True
         self.current_board, self.next = game_simulation(self.move, self.current_board)
+
+    def copy(self):
+        new_branch = TreeBranch(self.parent)
+        new_branch.current_board = copy(self.current_board)
+        new_branch.move = self.move.copy()
+        new_branch.next = self.next.copy()
+        return new_branch
 
 
 layers = np.empty((3, 3, 3), dtype=Point)
@@ -394,12 +419,13 @@ def animated_switch_position(p1: Point, p2: Point):
 
 
 def remove_piece(p):
-    global phase, win_player
+    global phase, win_player, turn
     state = p.get_state()
     pawns_count[state - 1] = pawns_count[state - 1] - 1
     if pawns_count[state-1] == 2:
 
         win_player = turn
+        turn = -1
         phase = 6
 
     r = random.randint(0, 1)
@@ -491,7 +517,7 @@ def game_simulation(move, board_layers):
                 next_move['turn'] = not_turn(next_move['turn'])
             else:
                 next_move['phase'] = 1
-                next_move['turn'] = next_move['first_mill']
+                next_move['turn'] = move['first_mill']
 
     else:
         if move['phase'] == 1:
@@ -564,7 +590,7 @@ def game(point):
             if phase == 2:
                 if point.get_state() == turn:
                     temp = point
-                if point.get_state() == 0:
+                if point.get_state() == 0 and temp:
                     if point.is_neighbor(temp):
                         animated_switch_position(temp, point)
                         temp = None
@@ -674,47 +700,50 @@ def count_player(player, board_layers):
 
 def evaluation(board_layers):
     # Eval for: New Mills For Current, Removed Mills for Opponent
-    eval_values = [31, 14, 10, 11, 1086]
+    eval_values = [30, 16, 10, 11, 1086]
 
     stats = [0, 0, 0, 0, 0, 0, 0]
-    stats[0], stats[1] = count_mills(board_layers)
-    stats[2], stats[3] = check_for_blocked(board_layers)
-    stats[4] = count_player(turn, board_layers)
-    stats[5] = count_player(not_turn(), board_layers)
+    [stats[0], stats[1]] = count_mills(board_layers)
+    [stats[2], stats[3]] = check_for_blocked(board_layers)
+    stats[4] = count_player(1, board_layers)
+    stats[5] = count_player(2, board_layers)
 
     if stats[5] < 3:
-        stats[6] = 1
-    if stats[4] < 3:
         stats[6] = -1
+    if stats[4] < 3:
+        stats[6] = 1
 
     score = 0
 
-    if stats[0] > current_stats[0]:
+    if stats[0] < current_stats[0]:
         score = score + eval_values[0]
-    if stats[1] < current_stats[1]:
+    if stats[1] > current_stats[1]:
         score = score + eval_values[1]
 
-    score = score + (eval_values[2]*(stats[2]-stats[3]))
-    score = score + (eval_values[3]*(stats[4]-stats[5]))
+    score = score + (eval_values[2]*(stats[3]-stats[2]))
+    score = score + (eval_values[3]*(stats[5]-stats[4]))
     score = score + (stats[6]*eval_values[4])
 
     return stats, score
 
 
 def AI_control():
+    global AI_level
     root = TreeBranch(None)
     root.set_root()
 
     # Tutaj ta 3 to głębokość :)
-    finals = check_moves([root], 3)
-
+    finals = check_moves([root], AI_level)
     # TUTAJ KOD DO ALFA-BETA, NIECH ZWRACA GAŁĄŻ Z RUCHEM JAKI NALEŻY PODJĄĆ
 
     # przykład - to zwraca po prostu pierwszego rodzica z brzegu
     # m = finals[0].parent.parent
-    m = alpha_beta.minmax2(root,3,-1000000,1000000,False)
-    m = m.parent.parent
 
+    m = alpha_beta.minmax2(root,AI_level,-1000000,1000000,True)
+    for x in range (0, AI_level-1):
+        m = m.parent
+
+    m.print_branch()
     # TUTAJ KOD DO ALFA-BETA, NIECH ZWRACA GAŁĄŻ Z RUCHEM JAKI NALEŻY PODJĄĆ
 
     if 'temp' in m.move:
@@ -733,6 +762,8 @@ def AI_control():
 
 def check_moves(parents, depth):
     if depth == 0:
+        for p in parents:
+            p.determine_stats()
         return parents
     children = []
     for q in parents:
@@ -749,20 +780,21 @@ def check_moves(parents, depth):
                                 child.heritage()
                                 child.set_point(p_l, p_x, p_y)
                                 child.determine_board()
+                                temp = copy(child.get_board())
                                 if child.next['phase'] == 1 and child.next['turn'] == child.get_turn():
-                                    for l2 in child.get_board():
+                                    for l2 in temp:
                                         for x2 in l2:
                                             for y2 in x2:
                                                 if y2:
                                                     if y2.get_state() == not_turn(child.get_turn()):
+                                                        child_copy = child.copy()
                                                         d_l, d_x, d_y = y2.get_l_x_y()
-                                                        child.determine_double(d_l, d_x, d_y)
-                                                        child.determine_stats()
-                                                        children.append(child)
-                                                        q.add_child(child)
+                                                        child_copy.determine_double(d_l, d_x, d_y)
+                                                        children.append(child_copy)
+                                                        q.add_child(child_copy)
                                 else:
                                     if child.next['phase'] == 2 and child.next['turn'] == child.get_turn():
-                                        for l2 in child.get_board():
+                                        for l2 in temp:
                                             for x2 in l2:
                                                 for y2 in x2:
                                                     if y2:
@@ -770,15 +802,14 @@ def check_moves(parents, depth):
                                                             neighbors = y2.get_neighbors()
                                                             for n in neighbors:
                                                                 d_l, d_x, d_y = n.get_l_x_y()
-                                                                if child.get_board()[d_l, d_x, d_y].get_state() == 0:
+                                                                if temp[d_l, d_x, d_y].get_state() == 0:
                                                                     t_l, t_x, t_y = y2.get_l_x_y()
-                                                                    child.set_temp(t_l, t_x, t_y)
-                                                                    child.determine_double(d_l, d_x, d_y)
-                                                                    child.determine_stats()
-                                                                    children.append(child)
-                                                                    q.add_child(child)
+                                                                    child_copy = child.copy()
+                                                                    child_copy.set_temp(t_l, t_x, t_y)
+                                                                    child_copy.determine_double(d_l, d_x, d_y)
+                                                                    children.append(child_copy)
+                                                                    q.add_child(child_copy)
                                     else:
-                                        child.determine_stats()
                                         children.append(child)
                                         q.add_child(child)
         if ph == 2 or ph == 4:
@@ -797,19 +828,19 @@ def check_moves(parents, depth):
                                         child.set_point(p_l, p_x, p_y)
                                         child.set_temp(t_l, t_x, t_y)
                                         child.determine_board()
+                                        temp = copy(child.get_board())
                                         if child.next['phase'] == 3:
-                                            for l2 in child.get_board():
+                                            for l2 in temp:
                                                 for x2 in l2:
                                                     for y2 in x2:
                                                         if y2:
                                                             if y2.get_state() == not_turn(child.get_turn()):
+                                                                child_copy = child.copy()
                                                                 d_l, d_x, d_y = y2.get_l_x_y()
-                                                                child.determine_double(d_l, d_x, d_y)
-                                                                child.determine_stats()
-                                                                children.append(child)
-                                                                q.add_child(child)
+                                                                child_copy.determine_double(d_l, d_x, d_y)
+                                                                children.append(child_copy)
+                                                                q.add_child(child_copy)
                                         else:
-                                            child.determine_stats()
                                             children.append(child)
                                             q.add_child(child)
 
@@ -824,11 +855,15 @@ def check_moves(parents, depth):
                                 child.heritage()
                                 child.set_point(p_l, p_x, p_y)
                                 child.determine_board()
-                                child.determine_stats()
                                 children.append(child)
                                 q.add_child(child)
-    if not children:
-        print('WTF')
+        if ph == 6:
+            child = TreeBranch(q)
+            child.heritage()
+            child.set_point(0,0,0)
+            child.determine_board()
+            children.append(child)
+            q.add_child(child)
     return check_moves(children, depth-1)
 
     
@@ -844,7 +879,9 @@ if __name__ == "__main__":
     temp = None
     pygame.display.flip()
     while running:
+
         for event in pygame.event.get():
+
             if event.type == pygame.BUTTON_X1:
                 print('PHASE: '+str(phase))
                 pos = pygame.mouse.get_pos()
@@ -855,8 +892,8 @@ if __name__ == "__main__":
                 if phase == 6:
                     screen.blit(background, (0, 0))
                     largeText = pygame.font.Font('freesansbold.ttf', 120)
-                    TextSurf, TextRect = text_objects('Gracz '+str(win_player) + ' wygrał!', largeText)
-                    TextRect.center = (display_width/2+50, display_height/2-100)
+                    TextSurf, TextRect = text_objects('Gracz ' + str(win_player) + ' wygrał!', largeText)
+                    TextRect.center = (display_width / 2 + 50, display_height / 2 - 100)
                     screen.blit(TextSurf, TextRect)
                     pygame.display.flip()
                 if phase == 2 and not check_available_moves(turn, layers):
@@ -890,6 +927,25 @@ if __name__ == "__main__":
                         switch_turn()
 
             if event.type == pygame.KEYDOWN:
-                game_reset()
+                if event.key==32:
+                    game_reset()
+                if event.key == 273:
+                    if AI_level < 5:
+                        AI_level = AI_level + 1
+                    redraw_board()
+                    largeText = pygame.font.Font('freesansbold.ttf', 30)
+                    TextSurf, TextRect = text_objects('AI level: ' + str(AI_level), largeText)
+                    TextRect.center = (80, display_height / 2 - 100)
+                    screen.blit(TextSurf, TextRect)
+                    pygame.display.flip()
+                if event.key == 274:
+                    if AI_level > 1:
+                        AI_level = AI_level - 1
+                    redraw_board()
+                    largeText = pygame.font.Font('freesansbold.ttf', 30)
+                    TextSurf, TextRect = text_objects('AI level: ' + str(AI_level), largeText)
+                    TextRect.center = (80, display_height / 2 - 100)
+                    screen.blit(TextSurf, TextRect)
+                    pygame.display.flip()
             if event.type == pygame.QUIT:
                 running = False
